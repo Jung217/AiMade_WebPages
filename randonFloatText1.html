@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOS 風格字母效果</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden; /* 確保文字只在視窗範圍內顯示 */
+        font-size: 18px; /* DOS 環境中字母較大 */
+        font-family: 'Courier New', monospace; /* DOS 字體風格 */
+        background-color: black; /* 背景顏色 */
+        color: gold; /* 文字顏色改為金黃色 */
+    }
+    .letter {
+        position: absolute;
+        transition: transform 0.2s, color 0.2s; /* 添加平滑過渡效果 */
+        will-change: transform, color; /* 提升性能 */
+        user-select: none; /* 防止選擇文本 */
+    }
+</style>
+</head>
+<body>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const windowHeight = window.innerHeight;
+        const windowWidth = window.innerWidth;
+        const interval = 22; // 間隔
+        const throttleDelay = 10; // 約 60 FPS
+
+        // 計算需要放置的字母數量
+        const lettersPerRow = Math.floor(windowWidth / interval);
+        const rows = Math.floor(windowHeight / interval);
+        const totalLetters = lettersPerRow * rows;
+
+        const letters = []; // 儲存字母的陣列
+
+        // 在視窗內隨機放置字母
+        for (let i = 0; i < totalLetters; i++) {
+            const letter = document.createElement('div');
+            letter.textContent = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // 隨機生成 A-Z 的字母
+            letter.className = 'letter';
+            letter.style.top = `${Math.floor(i / lettersPerRow) * interval}px`;
+            letter.style.left = `${(i % lettersPerRow) * interval}px`;
+            document.body.appendChild(letter);
+            letters.push(letter);
+        }
+
+        // 計算距離函數
+        function calculateDistance(x1, y1, x2, y2) {
+            return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        }
+
+        // 更新字母樣式
+        function updateLetters(mouseX, mouseY) {
+            letters.forEach(letter => {
+                const letterRect = letter.getBoundingClientRect();
+                const letterX = letterRect.left + letterRect.width / 2;
+                const letterY = letterRect.top + letterRect.height / 2;
+                const distance = calculateDistance(mouseX, mouseY, letterX, letterY);
+
+                if (distance < 120) { // 距離小於 120px 時改變顏色和位置
+                    const scale = 1 + (1 - distance / 120); // 根據距離縮放字母
+                    const repulsionDistance = Math.max(0, 10 - (10 * (distance / 120))); // 計算偏移距離
+                    const angle = Math.atan2(letterY - mouseY, letterX - mouseX); // 計算角度
+                    const offsetX = repulsionDistance * Math.cos(angle);
+                    const offsetY = repulsionDistance * Math.sin(angle);
+
+                    // 更新位置和縮放
+                    letter.style.transform = `scale(${scale}) translate(${offsetX}px, ${offsetY}px)`;
+                    letter.style.color = 'white';
+                } else {
+                    // 距離超過 120px 恢復初始樣式
+                    letter.style.transform = 'none';
+                    letter.style.color = 'gold';
+                }
+            });
+        }
+
+        // 節流函數
+        let lastUpdate = 0;
+        function throttle(callback, delay) {
+            return function(event) {
+                const now = Date.now();
+                if (now - lastUpdate > delay) {
+                    lastUpdate = now;
+                    callback(event);
+                }
+            };
+        }
+
+        // 使用 requestAnimationFrame 和節流
+        document.addEventListener('mousemove', throttle(function(event) {
+            requestAnimationFrame(() => updateLetters(event.clientX, event.clientY));
+        }, throttleDelay));
+    });
+</script>
+</body>
+</html>
